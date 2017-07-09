@@ -7,7 +7,7 @@ use std::fmt;
 use std::cmp;
 use std::cmp::Ordering::{self, Less, Greater, Equal};
 use std::{f32, f64};
-use std::{u8, u64};
+use std::{u8, u128};
 use std::ascii::AsciiExt;
 
 #[cfg(feature = "serde")]
@@ -225,7 +225,7 @@ impl Num for BigUint {
 
         if s.is_empty() {
             // create ParseIntError::Empty
-            let e = u64::from_str_radix(s, radix).unwrap_err();
+            let e = u128::from_str_radix(s, radix).unwrap_err();
             return Err(e.into());
         }
 
@@ -244,7 +244,7 @@ impl Num for BigUint {
                 // create ParseIntError::InvalidDigit
                 // Include the previous character for context.
                 let i = cmp::max(v.len(), 1) - 1;
-                let e = u64::from_str_radix(&s[i..], radix).unwrap_err();
+                let e = u128::from_str_radix(&s[i..], radix).unwrap_err();
                 return Err(e.into());
             }
         }
@@ -582,27 +582,27 @@ impl Integer for BigUint {
     }
 }
 
-fn high_bits_to_u64(v: &BigUint) -> u64 {
+fn high_bits_to_u128(v: &BigUint) -> u128 {
     match v.data.len() {
         0   => 0,
-        1   => v.data[0] as u64,
+        1   => v.data[0] as u128,
         _   => {
             let mut bits = v.bits();
-            let mut ret = 0u64;
+            let mut ret = 0u128;
             let mut ret_bits = 0;
 
             for d in v.data.iter().rev() {
                 let digit_bits = (bits - 1) % big_digit::BITS + 1;
-                let bits_want = cmp::min(64 - ret_bits, digit_bits);
+                let bits_want = cmp::min(128 - ret_bits, digit_bits);
 
-                if bits_want != 64 {
+                if bits_want != 128 {
                     ret <<= bits_want;
                 }
-                ret      |= *d as u64 >> (digit_bits - bits_want);
+                ret      |= *d as u128 >> (digit_bits - bits_want);
                 ret_bits += bits_want;
                 bits     -= bits_want;
 
-                if ret_bits == 64 {
+                if ret_bits == 128 {
                     break;
                 }
             }
@@ -614,11 +614,11 @@ fn high_bits_to_u64(v: &BigUint) -> u64 {
 
 impl ToPrimitive for BigUint {
     #[inline]
-    fn to_i64(&self) -> Option<i64> {
-        self.to_u64().and_then(|n| {
-            // If top bit of u64 is set, it's too large to convert to i64.
-            if n >> 63 == 0 {
-                Some(n as i64)
+    fn to_i128(&self) -> Option<i128> {
+        self.to_u128().and_then(|n| {
+            // If top bit of u128 is set, it's too large to convert to i128.
+            if n >> 127 == 0 {
+                Some(n as i128)
             } else {
                 None
             }
@@ -626,16 +626,16 @@ impl ToPrimitive for BigUint {
     }
 
     #[inline]
-    fn to_u64(&self) -> Option<u64> {
-        let mut ret: u64 = 0;
+    fn to_u128(&self) -> Option<u128> {
+        let mut ret: u128 = 0;
         let mut bits = 0;
 
         for i in self.data.iter() {
-            if bits >= 64 {
+            if bits >= 128 {
                 return None;
             }
 
-            ret += (*i as u64) << bits;
+            ret += (*i as u128) << bits;
             bits += big_digit::BITS;
         }
 
@@ -644,7 +644,7 @@ impl ToPrimitive for BigUint {
 
     #[inline]
     fn to_f32(&self) -> Option<f32> {
-        let mantissa = high_bits_to_u64(self);
+        let mantissa = high_bits_to_u128(self);
         let exponent = self.bits() - fls(mantissa);
 
         if exponent > f32::MAX_EXP as usize {
@@ -661,7 +661,7 @@ impl ToPrimitive for BigUint {
 
     #[inline]
     fn to_f64(&self) -> Option<f64> {
-        let mantissa = high_bits_to_u64(self);
+        let mantissa = high_bits_to_u128(self);
         let exponent = self.bits() - fls(mantissa);
 
         if exponent > f64::MAX_EXP as usize {
@@ -679,16 +679,16 @@ impl ToPrimitive for BigUint {
 
 impl FromPrimitive for BigUint {
     #[inline]
-    fn from_i64(n: i64) -> Option<BigUint> {
+    fn from_i128(n: i128) -> Option<BigUint> {
         if n >= 0 {
-            Some(BigUint::from(n as u64))
+            Some(BigUint::from(n as u128))
         } else {
             None
         }
     }
 
     #[inline]
-    fn from_u64(n: u64) -> Option<BigUint> {
+    fn from_u128(n: u128) -> Option<BigUint> {
         Some(BigUint::from(n))
     }
 
@@ -723,14 +723,14 @@ impl FromPrimitive for BigUint {
     }
 }
 
-impl From<u64> for BigUint {
+impl From<u128> for BigUint {
     #[inline]
-    fn from(mut n: u64) -> Self {
+    fn from(mut n: u128) -> Self {
         let mut ret: BigUint = Zero::zero();
 
         while n != 0 {
             ret.data.push(n as BigDigit);
-            // don't overflow if BITS is 64:
+            // don't overflow if BITS is 128:
             n = (n >> 1) >> (big_digit::BITS - 1);
         }
 
@@ -743,7 +743,7 @@ macro_rules! impl_biguint_from_uint {
         impl From<$T> for BigUint {
             #[inline]
             fn from(n: $T) -> Self {
-                BigUint::from(n as u64)
+                BigUint::from(n as u128)
             }
         }
     }
@@ -752,6 +752,7 @@ macro_rules! impl_biguint_from_uint {
 impl_biguint_from_uint!(u8);
 impl_biguint_from_uint!(u16);
 impl_biguint_from_uint!(u32);
+impl_biguint_from_uint!(u64);
 impl_biguint_from_uint!(usize);
 
 /// A generic trait for converting a value to a `BigUint`.
@@ -783,11 +784,13 @@ impl_to_biguint!(i8, FromPrimitive::from_i8);
 impl_to_biguint!(i16, FromPrimitive::from_i16);
 impl_to_biguint!(i32, FromPrimitive::from_i32);
 impl_to_biguint!(i64, FromPrimitive::from_i64);
+impl_to_biguint!(i128, FromPrimitive::from_i128);
 impl_to_biguint!(usize, FromPrimitive::from_usize);
 impl_to_biguint!(u8, FromPrimitive::from_u8);
 impl_to_biguint!(u16, FromPrimitive::from_u16);
 impl_to_biguint!(u32, FromPrimitive::from_u32);
 impl_to_biguint!(u64, FromPrimitive::from_u64);
+impl_to_biguint!(u128, FromPrimitive::from_u128);
 impl_to_biguint!(f32, FromPrimitive::from_f32);
 impl_to_biguint!(f64, FromPrimitive::from_f64);
 

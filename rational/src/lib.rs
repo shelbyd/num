@@ -14,6 +14,9 @@
        html_root_url = "https://rust-num.github.io/num/",
        html_playground_url = "http://play.integer32.com/")]
 
+#![feature(i128)]
+#![feature(i128_type)]
+
 #[cfg(feature = "rustc-serialize")]
 extern crate rustc_serialize;
 #[cfg(feature = "serde")]
@@ -51,6 +54,7 @@ pub struct Ratio<T> {
 pub type Rational = Ratio<isize>;
 pub type Rational32 = Ratio<i32>;
 pub type Rational64 = Ratio<i64>;
+pub type Rational128 = Ratio<i128>;
 
 #[cfg(feature = "num-bigint")]
 /// Alias for arbitrary precision rationals.
@@ -143,8 +147,10 @@ impl<T: Clone + Integer> Ratio<T> {
         match self.numer.cmp(&T::zero()) {
             cmp::Ordering::Equal => panic!("numerator == 0"),
             cmp::Ordering::Greater => Ratio::new_raw(self.denom.clone(), self.numer.clone()),
-            cmp::Ordering::Less => Ratio::new_raw(T::zero() - self.denom.clone(),
-                                                  T::zero() - self.numer.clone())
+            cmp::Ordering::Less => {
+                Ratio::new_raw(T::zero() - self.denom.clone(),
+                               T::zero() - self.numer.clone())
+            }
         }
     }
 
@@ -243,11 +249,7 @@ impl Ratio<BigInt> {
             return None;
         }
         let (mantissa, exponent, sign) = f.integer_decode();
-        let bigint_sign = if sign == 1 {
-            Sign::Plus
-        } else {
-            Sign::Minus
-        };
+        let bigint_sign = if sign == 1 { Sign::Plus } else { Sign::Minus };
         if exponent < 0 {
             let one: BigInt = One::one();
             let denom: BigInt = one << ((-exponent) as usize);
@@ -262,7 +264,9 @@ impl Ratio<BigInt> {
 }
 
 // From integer
-impl<T> From<T> for Ratio<T> where T: Clone + Integer {
+impl<T> From<T> for Ratio<T>
+    where T: Clone + Integer
+{
     fn from(x: T) -> Ratio<T> {
         Ratio::from_integer(x)
     }
@@ -270,7 +274,9 @@ impl<T> From<T> for Ratio<T> where T: Clone + Integer {
 
 
 // From pair (through the `new` constructor)
-impl<T> From<(T, T)> for Ratio<T> where T: Clone + Integer {
+impl<T> From<(T, T)> for Ratio<T>
+    where T: Clone + Integer
+{
     fn from(pair: (T, T)) -> Ratio<T> {
         Ratio::new(pair.0, pair.1)
     }
@@ -503,13 +509,11 @@ impl<T: Clone + Integer> Num for Ratio<T> {
         if split.len() < 2 {
             Err(ParseRatioError { kind: RatioErrorKind::ParseError })
         } else {
-            let a_result: Result<T, _> = T::from_str_radix(split[0], radix).map_err(|_| {
-                ParseRatioError { kind: RatioErrorKind::ParseError }
-            });
+            let a_result: Result<T, _> = T::from_str_radix(split[0], radix)
+                .map_err(|_| ParseRatioError { kind: RatioErrorKind::ParseError });
             a_result.and_then(|a| {
-                let b_result: Result<T, _> = T::from_str_radix(split[1], radix).map_err(|_| {
-                    ParseRatioError { kind: RatioErrorKind::ParseError }
-                });
+                let b_result: Result<T, _> = T::from_str_radix(split[1], radix)
+                    .map_err(|_| ParseRatioError { kind: RatioErrorKind::ParseError });
                 b_result.and_then(|b| {
                     if b.is_zero() {
                         Err(ParseRatioError { kind: RatioErrorKind::ZeroDenominator })
@@ -626,7 +630,7 @@ impl<T> serde::Deserialize for Ratio<T>
     fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
         where D: serde::Deserializer
     {
-        let (numer, denom): (T,T) = try!(serde::Deserialize::deserialize(deserializer));
+        let (numer, denom): (T, T) = try!(serde::Deserialize::deserialize(deserializer));
         if denom.is_zero() {
             Err(serde::de::Error::invalid_value("denominator is zero"))
         } else {
@@ -670,11 +674,11 @@ impl RatioErrorKind {
 
 #[cfg(feature = "num-bigint")]
 impl FromPrimitive for Ratio<BigInt> {
-    fn from_i64(n: i64) -> Option<Self> {
+    fn from_i128(n: i128) -> Option<Self> {
         Some(Ratio::from_integer(n.into()))
     }
 
-    fn from_u64(n: u64) -> Option<Self> {
+    fn from_u128(n: u128) -> Option<Self> {
         Some(Ratio::from_integer(n.into()))
     }
 
@@ -690,12 +694,12 @@ impl FromPrimitive for Ratio<BigInt> {
 macro_rules! from_primitive_integer {
     ($typ:ty, $approx:ident) => {
         impl FromPrimitive for Ratio<$typ> {
-            fn from_i64(n: i64) -> Option<Self> {
-                <$typ as FromPrimitive>::from_i64(n).map(Ratio::from_integer)
+            fn from_i128(n: i128) -> Option<Self> {
+                <$typ as FromPrimitive>::from_i128(n).map(Ratio::from_integer)
             }
 
-            fn from_u64(n: u64) -> Option<Self> {
-                <$typ as FromPrimitive>::from_u64(n).map(Ratio::from_integer)
+            fn from_u128(n: u128) -> Option<Self> {
+                <$typ as FromPrimitive>::from_u128(n).map(Ratio::from_integer)
             }
 
             fn from_f32(n: f32) -> Option<Self> {
@@ -713,12 +717,14 @@ from_primitive_integer!(i8, approximate_float);
 from_primitive_integer!(i16, approximate_float);
 from_primitive_integer!(i32, approximate_float);
 from_primitive_integer!(i64, approximate_float);
+from_primitive_integer!(i128, approximate_float);
 from_primitive_integer!(isize, approximate_float);
 
 from_primitive_integer!(u8, approximate_float_unsigned);
 from_primitive_integer!(u16, approximate_float_unsigned);
 from_primitive_integer!(u32, approximate_float_unsigned);
 from_primitive_integer!(u64, approximate_float_unsigned);
+from_primitive_integer!(u128, approximate_float_unsigned);
 from_primitive_integer!(usize, approximate_float_unsigned);
 
 impl<T: Integer + Signed + Bounded + NumCast + Clone> Ratio<T> {
@@ -741,11 +747,7 @@ fn approximate_float<T, F>(val: F, max_error: F, max_iterations: usize) -> Optio
     let r = approximate_float_unsigned(abs_val, max_error, max_iterations);
 
     // Make negative again if needed
-    if negative {
-        r.map(|r| r.neg())
-    } else {
-        r
-    }
+    if negative { r.map(|r| r.neg()) } else { r }
 }
 
 // No Unsigned constraint because this also works on positive integers and is called
@@ -795,8 +797,7 @@ fn approximate_float_unsigned<T, F>(val: F, max_error: F, max_iterations: usize)
 
         // Prevent overflow
         if !a.is_zero() &&
-           (n1 > t_max.clone() / a.clone() ||
-            d1 > t_max.clone() / a.clone() ||
+           (n1 > t_max.clone() / a.clone() || d1 > t_max.clone() / a.clone() ||
             a.clone() * n1.clone() > t_max.clone() - n0.clone() ||
             a.clone() * d1.clone() > t_max.clone() - d0.clone()) {
             break;

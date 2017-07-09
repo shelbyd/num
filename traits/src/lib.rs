@@ -14,6 +14,9 @@
        html_root_url = "https://rust-num.github.io/num/",
        html_playground_url = "http://play.integer32.com/")]
 
+#![feature(i128_type)]
+#![feature(i128)]
+
 use std::ops::{Add, Sub, Mul, Div, Rem};
 use std::ops::{AddAssign, SubAssign, MulAssign, DivAssign, RemAssign};
 use std::num::Wrapping;
@@ -40,8 +43,7 @@ pub mod pow;
 
 /// The base trait for numeric types, covering `0` and `1` values,
 /// comparisons, basic numeric operations, and string conversion.
-pub trait Num: PartialEq + Zero + One + NumOps
-{
+pub trait Num: PartialEq + Zero + One + NumOps {
     type FromStrRadixErr;
 
     /// Convert from a string and radix <= 36.
@@ -97,20 +99,14 @@ impl<T, Base> RefNum<Base> for T where T: NumOps<Base, Base> + for<'r> NumOps<&'
 ///
 /// This is automatically implemented for types which implement the operators.
 pub trait NumAssignOps<Rhs = Self>
-    : AddAssign<Rhs>
-    + SubAssign<Rhs>
-    + MulAssign<Rhs>
-    + DivAssign<Rhs>
-    + RemAssign<Rhs>
-{}
+    : AddAssign<Rhs> + SubAssign<Rhs> + MulAssign<Rhs> + DivAssign<Rhs> + RemAssign<Rhs>
+    {
+}
 
 impl<T, Rhs> NumAssignOps<Rhs> for T
-where T: AddAssign<Rhs>
-       + SubAssign<Rhs>
-       + MulAssign<Rhs>
-       + DivAssign<Rhs>
-       + RemAssign<Rhs>
-{}
+    where T: AddAssign<Rhs> + SubAssign<Rhs> + MulAssign<Rhs> + DivAssign<Rhs> + RemAssign<Rhs>
+{
+}
 
 /// The trait for `Num` types which also implement assignment operators.
 ///
@@ -139,7 +135,7 @@ macro_rules! int_trait_impl {
         }
     )*)
 }
-int_trait_impl!(Num for usize u8 u16 u32 u64 isize i8 i16 i32 i64);
+int_trait_impl!(Num for usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128);
 
 impl<T: Num> Num for Wrapping<T>
     where Wrapping<T>:
@@ -379,7 +375,7 @@ fn wrapping_is_num() {
 }
 #[test]
 fn wrapping_from_str_radix() {
-    test_wrapping_from_str_radix!(usize u8 u16 u32 u64 isize i8 i16 i32 i64);
+    test_wrapping_from_str_radix!(usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128);
 }
 
 #[test]

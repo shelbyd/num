@@ -4,9 +4,9 @@ use Sign::{Minus, NoSign, Plus};
 
 use std::cmp::Ordering::{Less, Equal, Greater};
 use std::{f32, f64};
-use std::{i8, i16, i32, i64, isize};
+use std::{i8, i16, i32, i64, i128, isize};
 use std::iter::repeat;
-use std::{u8, u16, u32, u64, usize};
+use std::{u8, u16, u32, u64, u128, usize};
 use std::ops::Neg;
 
 use rand::thread_rng;
@@ -238,51 +238,51 @@ fn test_hash() {
 }
 
 #[test]
-fn test_convert_i64() {
-    fn check(b1: BigInt, i: i64) {
-        let b2: BigInt = FromPrimitive::from_i64(i).unwrap();
+fn test_convert_i128() {
+    fn check(b1: BigInt, i: i128) {
+        let b2: BigInt = FromPrimitive::from_i128(i).unwrap();
         assert!(b1 == b2);
-        assert!(b1.to_i64().unwrap() == i);
+        assert!(b1.to_i128().unwrap() == i);
     }
 
     check(Zero::zero(), 0);
     check(One::one(), 1);
-    check(i64::MIN.to_bigint().unwrap(), i64::MIN);
-    check(i64::MAX.to_bigint().unwrap(), i64::MAX);
+    check(i128::MIN.to_bigint().unwrap(), i128::MIN);
+    check(i128::MAX.to_bigint().unwrap(), i128::MAX);
 
-    assert_eq!((i64::MAX as u64 + 1).to_bigint().unwrap().to_i64(), None);
+    assert_eq!((i128::MAX as u128 + 1).to_bigint().unwrap().to_i128(), None);
 
-    assert_eq!(BigInt::from_biguint(Plus, BigUint::new(vec![1, 2, 3, 4, 5])).to_i64(),
+    assert_eq!(BigInt::from_biguint(Plus, BigUint::new(vec![1, 2, 3, 4, 5])).to_i128(),
                None);
 
     assert_eq!(BigInt::from_biguint(Minus,
                                     BigUint::new(vec![1, 0, 0, 1 << (big_digit::BITS - 1)]))
-                   .to_i64(),
+                   .to_i128(),
                None);
 
-    assert_eq!(BigInt::from_biguint(Minus, BigUint::new(vec![1, 2, 3, 4, 5])).to_i64(),
+    assert_eq!(BigInt::from_biguint(Minus, BigUint::new(vec![1, 2, 3, 4, 5])).to_i128(),
                None);
 }
 
 #[test]
-fn test_convert_u64() {
-    fn check(b1: BigInt, u: u64) {
-        let b2: BigInt = FromPrimitive::from_u64(u).unwrap();
+fn test_convert_u128() {
+    fn check(b1: BigInt, u: u128) {
+        let b2: BigInt = FromPrimitive::from_u128(u).unwrap();
         assert!(b1 == b2);
-        assert!(b1.to_u64().unwrap() == u);
+        assert!(b1.to_u128().unwrap() == u);
     }
 
     check(Zero::zero(), 0);
     check(One::one(), 1);
-    check(u64::MIN.to_bigint().unwrap(), u64::MIN);
-    check(u64::MAX.to_bigint().unwrap(), u64::MAX);
+    check(u128::MIN.to_bigint().unwrap(), u128::MIN);
+    check(u128::MAX.to_bigint().unwrap(), u128::MAX);
 
-    assert_eq!(BigInt::from_biguint(Plus, BigUint::new(vec![1, 2, 3, 4, 5])).to_u64(),
+    assert_eq!(BigInt::from_biguint(Plus, BigUint::new(vec![1, 2, 3, 4, 5])).to_u128(),
                None);
 
-    let max_value: BigUint = FromPrimitive::from_u64(u64::MAX).unwrap();
-    assert_eq!(BigInt::from_biguint(Minus, max_value).to_u64(), None);
-    assert_eq!(BigInt::from_biguint(Minus, BigUint::new(vec![1, 2, 3, 4, 5])).to_u64(),
+    let max_value: BigUint = FromPrimitive::from_u128(u128::MAX).unwrap();
+    assert_eq!(BigInt::from_biguint(Minus, max_value).to_u128(), None);
+    assert_eq!(BigInt::from_biguint(Minus, BigUint::new(vec![1, 2, 3, 4, 5])).to_u128(),
                None);
 }
 
@@ -520,17 +520,16 @@ fn test_convert_from_biguint() {
 const N1: BigDigit = -1i32 as BigDigit;
 const N2: BigDigit = -2i32 as BigDigit;
 
-const SUM_TRIPLES: &'static [(&'static [BigDigit],
-           &'static [BigDigit],
-           &'static [BigDigit])] = &[(&[], &[], &[]),
-                                     (&[], &[1], &[1]),
-                                     (&[1], &[1], &[2]),
-                                     (&[1], &[1, 1], &[2, 1]),
-                                     (&[1], &[N1], &[0, 1]),
-                                     (&[1], &[N1, N1], &[0, 0, 1]),
-                                     (&[N1, N1], &[N1, N1], &[N2, N1, 1]),
-                                     (&[1, 1, 1], &[N1, N1], &[0, 1, 2]),
-                                     (&[2, 2, 1], &[N1, N2], &[1, 1, 2])];
+const SUM_TRIPLES: &'static [(&'static [BigDigit], &'static [BigDigit], &'static [BigDigit])] =
+    &[(&[], &[], &[]),
+      (&[], &[1], &[1]),
+      (&[1], &[1], &[2]),
+      (&[1], &[1, 1], &[2, 1]),
+      (&[1], &[N1], &[0, 1]),
+      (&[1], &[N1, N1], &[0, 0, 1]),
+      (&[N1, N1], &[N1, N1], &[N2, N1, 1]),
+      (&[1, 1, 1], &[N1, N1], &[0, 1, 2]),
+      (&[2, 2, 1], &[N1, N2], &[1, 1, 2])];
 
 #[test]
 fn test_add() {
@@ -573,31 +572,28 @@ fn test_sub() {
 }
 
 const M: u32 = ::std::u32::MAX;
-static MUL_TRIPLES: &'static [(&'static [BigDigit],
-           &'static [BigDigit],
-           &'static [BigDigit])] = &[(&[], &[], &[]),
-                                     (&[], &[1], &[]),
-                                     (&[2], &[], &[]),
-                                     (&[1], &[1], &[1]),
-                                     (&[2], &[3], &[6]),
-                                     (&[1], &[1, 1, 1], &[1, 1, 1]),
-                                     (&[1, 2, 3], &[3], &[3, 6, 9]),
-                                     (&[1, 1, 1], &[N1], &[N1, N1, N1]),
-                                     (&[1, 2, 3], &[N1], &[N1, N2, N2, 2]),
-                                     (&[1, 2, 3, 4], &[N1], &[N1, N2, N2, N2, 3]),
-                                     (&[N1], &[N1], &[1, N2]),
-                                     (&[N1, N1], &[N1], &[1, N1, N2]),
-                                     (&[N1, N1, N1], &[N1], &[1, N1, N1, N2]),
-                                     (&[N1, N1, N1, N1], &[N1], &[1, N1, N1, N1, N2]),
-                                     (&[M / 2 + 1], &[2], &[0, 1]),
-                                     (&[0, M / 2 + 1], &[2], &[0, 0, 1]),
-                                     (&[1, 2], &[1, 2, 3], &[1, 4, 7, 6]),
-                                     (&[N1, N1], &[N1, N1, N1], &[1, 0, N1, N2, N1]),
-                                     (&[N1, N1, N1],
-                                      &[N1, N1, N1, N1],
-                                      &[1, 0, 0, N1, N2, N1, N1]),
-                                     (&[0, 0, 1], &[1, 2, 3], &[0, 0, 1, 2, 3]),
-                                     (&[0, 0, 1], &[0, 0, 0, 1], &[0, 0, 0, 0, 0, 1])];
+static MUL_TRIPLES: &'static [(&'static [BigDigit], &'static [BigDigit], &'static [BigDigit])] =
+    &[(&[], &[], &[]),
+      (&[], &[1], &[]),
+      (&[2], &[], &[]),
+      (&[1], &[1], &[1]),
+      (&[2], &[3], &[6]),
+      (&[1], &[1, 1, 1], &[1, 1, 1]),
+      (&[1, 2, 3], &[3], &[3, 6, 9]),
+      (&[1, 1, 1], &[N1], &[N1, N1, N1]),
+      (&[1, 2, 3], &[N1], &[N1, N2, N2, 2]),
+      (&[1, 2, 3, 4], &[N1], &[N1, N2, N2, N2, 3]),
+      (&[N1], &[N1], &[1, N2]),
+      (&[N1, N1], &[N1], &[1, N1, N2]),
+      (&[N1, N1, N1], &[N1], &[1, N1, N1, N2]),
+      (&[N1, N1, N1, N1], &[N1], &[1, N1, N1, N1, N2]),
+      (&[M / 2 + 1], &[2], &[0, 1]),
+      (&[0, M / 2 + 1], &[2], &[0, 0, 1]),
+      (&[1, 2], &[1, 2, 3], &[1, 4, 7, 6]),
+      (&[N1, N1], &[N1, N1, N1], &[1, 0, N1, N2, N1]),
+      (&[N1, N1, N1], &[N1, N1, N1, N1], &[1, 0, 0, N1, N2, N1, N1]),
+      (&[0, 0, 1], &[1, 2, 3], &[0, 0, 1, 2, 3]),
+      (&[0, 0, 1], &[0, 0, 0, 1], &[0, 0, 0, 0, 0, 1])];
 
 static DIV_REM_QUADRUPLES: &'static [(&'static [BigDigit],
            &'static [BigDigit],

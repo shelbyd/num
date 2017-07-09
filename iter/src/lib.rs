@@ -14,6 +14,9 @@
        html_root_url = "https://rust-num.github.io/num/",
        html_playground_url = "http://play.integer32.com/")]
 
+#![feature(i128)]
+#![feature(i128_type)]
+
 extern crate num_traits as traits;
 extern crate num_integer as integer;
 
@@ -26,7 +29,7 @@ use std::ops::{Add, Sub};
 pub struct Range<A> {
     state: A,
     stop: A,
-    one: A
+    one: A,
 }
 
 /// Returns an iterator over the given range [start, stop) (that is, starting
@@ -46,7 +49,11 @@ pub struct Range<A> {
 pub fn range<A>(start: A, stop: A) -> Range<A>
     where A: Add<A, Output = A> + PartialOrd + Clone + One
 {
-    Range{state: start, stop: stop, one: One::one()}
+    Range {
+        state: start,
+        stop: stop,
+        one: One::one(),
+    }
 }
 
 // FIXME: rust-lang/rust#10414: Unfortunate type bound
@@ -68,33 +75,35 @@ impl<A> Iterator for Range<A>
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        // This first checks if the elements are representable as i64. If they aren't, try u64 (to
+        // This first checks if the elements are representable as i128. If they aren't, try u128 (to
         // handle cases like range(huge, huger)). We don't use usize/int because the difference of
-        // the i64/u64 might lie within their range.
-        let bound = match self.state.to_i64() {
+        // the i128/u128 might lie within their range.
+        let bound = match self.state.to_i128() {
             Some(a) => {
-                let sz = self.stop.to_i64().map(|b| b.checked_sub(a));
+                let sz = self.stop.to_i128().map(|b| b.checked_sub(a));
                 match sz {
                     Some(Some(bound)) => bound.to_usize(),
                     _ => None,
                 }
-            },
-            None => match self.state.to_u64() {
-                Some(a) => {
-                    let sz = self.stop.to_u64().map(|b| b.checked_sub(a));
-                    match sz {
-                        Some(Some(bound)) => bound.to_usize(),
-                        _ => None
+            }
+            None => {
+                match self.state.to_u128() {
+                    Some(a) => {
+                        let sz = self.stop.to_u128().map(|b| b.checked_sub(a));
+                        match sz {
+                            Some(Some(bound)) => bound.to_usize(),
+                            _ => None,
+                        }
                     }
-                },
-                None => None
+                    None => None,
+                }
             }
         };
 
         match bound {
             Some(b) => (b, Some(b)),
             // Standard fallback for unbounded/unrepresentable bounds
-            None => (0, None)
+            None => (0, None),
         }
     }
 }
@@ -127,7 +136,10 @@ pub struct RangeInclusive<A> {
 pub fn range_inclusive<A>(start: A, stop: A) -> RangeInclusive<A>
     where A: Add<A, Output = A> + PartialOrd + Clone + One
 {
-    RangeInclusive{range: range(start, stop), done: false}
+    RangeInclusive {
+        range: range(start, stop),
+        done: false,
+    }
 }
 
 impl<A> Iterator for RangeInclusive<A>
@@ -159,7 +171,7 @@ impl<A> Iterator for RangeInclusive<A>
             let lo = lo.saturating_add(1);
             let hi = match hi {
                 Some(x) => x.checked_add(1),
-                None => None
+                None => None,
             };
             (lo, hi)
         }
@@ -199,7 +211,12 @@ pub fn range_step<A>(start: A, stop: A, step: A) -> RangeStep<A>
     where A: CheckedAdd + PartialOrd + Clone + Zero
 {
     let rev = step < Zero::zero();
-    RangeStep{state: start, stop: stop, step: step, rev: rev}
+    RangeStep {
+        state: start,
+        stop: stop,
+        step: step,
+        rev: rev,
+    }
 }
 
 impl<A> Iterator for RangeStep<A>
@@ -213,7 +230,7 @@ impl<A> Iterator for RangeStep<A>
             let result = self.state.clone();
             match self.state.checked_add(&self.step) {
                 Some(x) => self.state = x,
-                None => self.state = self.stop.clone()
+                None => self.state = self.stop.clone(),
             }
             Some(result)
         } else {
@@ -238,7 +255,13 @@ pub fn range_step_inclusive<A>(start: A, stop: A, step: A) -> RangeStepInclusive
     where A: CheckedAdd + PartialOrd + Clone + Zero
 {
     let rev = step < Zero::zero();
-    RangeStepInclusive{state: start, stop: stop, step: step, rev: rev, done: false}
+    RangeStepInclusive {
+        state: start,
+        stop: stop,
+        step: step,
+        rev: rev,
+        done: false,
+    }
 }
 
 impl<A> Iterator for RangeStepInclusive<A>
@@ -248,12 +271,12 @@ impl<A> Iterator for RangeStepInclusive<A>
 
     #[inline]
     fn next(&mut self) -> Option<A> {
-        if !self.done && ((self.rev && self.state >= self.stop) ||
-                          (!self.rev && self.state <= self.stop)) {
+        if !self.done &&
+           ((self.rev && self.state >= self.stop) || (!self.rev && self.state <= self.stop)) {
             let result = self.state.clone();
             match self.state.checked_add(&self.step) {
                 Some(x) => self.state = x,
-                None => self.done = true
+                None => self.done = true,
             }
             Some(result)
         } else {
@@ -275,8 +298,12 @@ mod tests {
         struct Foo;
 
         impl ToPrimitive for Foo {
-            fn to_i64(&self) -> Option<i64> { None }
-            fn to_u64(&self) -> Option<u64> { None }
+            fn to_i128(&self) -> Option<i128> {
+                None
+            }
+            fn to_u128(&self) -> Option<u128> {
+                None
+            }
         }
 
         impl Add<Foo> for Foo {
@@ -330,14 +357,14 @@ mod tests {
 
         assert_eq!(super::range(0, 100).size_hint(), (100, Some(100)));
         // this test is only meaningful when sizeof usize < sizeof u64
-        assert_eq!(super::range(usize::MAX - 1, usize::MAX).size_hint(), (1, Some(1)));
+        assert_eq!(super::range(usize::MAX - 1, usize::MAX).size_hint(),
+                   (1, Some(1)));
         assert_eq!(super::range(-10, -1).size_hint(), (9, Some(9)));
     }
 
     #[test]
     fn test_range_inclusive() {
-        assert!(super::range_inclusive(0, 5).collect::<Vec<isize>>() ==
-                vec![0, 1, 2, 3, 4, 5]);
+        assert!(super::range_inclusive(0, 5).collect::<Vec<isize>>() == vec![0, 1, 2, 3, 4, 5]);
         assert!(super::range_inclusive(0, 5).rev().collect::<Vec<isize>>() ==
                 vec![5, 4, 3, 2, 1, 0]);
         assert_eq!(super::range_inclusive(200, -5).count(), 0);
@@ -348,14 +375,10 @@ mod tests {
 
     #[test]
     fn test_range_step() {
-        assert!(super::range_step(0, 20, 5).collect::<Vec<isize>>() ==
-                vec![0, 5, 10, 15]);
-        assert!(super::range_step(20, 0, -5).collect::<Vec<isize>>() ==
-                vec![20, 15, 10, 5]);
-        assert!(super::range_step(20, 0, -6).collect::<Vec<isize>>() ==
-                vec![20, 14, 8, 2]);
-        assert!(super::range_step(200u8, 255, 50).collect::<Vec<u8>>() ==
-                vec![200u8, 250]);
+        assert!(super::range_step(0, 20, 5).collect::<Vec<isize>>() == vec![0, 5, 10, 15]);
+        assert!(super::range_step(20, 0, -5).collect::<Vec<isize>>() == vec![20, 15, 10, 5]);
+        assert!(super::range_step(20, 0, -6).collect::<Vec<isize>>() == vec![20, 14, 8, 2]);
+        assert!(super::range_step(200u8, 255, 50).collect::<Vec<u8>>() == vec![200u8, 250]);
         assert!(super::range_step(200, -5, 1).collect::<Vec<isize>>() == vec![]);
         assert!(super::range_step(200, 200, 1).collect::<Vec<isize>>() == vec![]);
     }
@@ -370,9 +393,7 @@ mod tests {
                 vec![20, 14, 8, 2]);
         assert!(super::range_step_inclusive(200u8, 255, 50).collect::<Vec<u8>>() ==
                 vec![200u8, 250]);
-        assert!(super::range_step_inclusive(200, -5, 1).collect::<Vec<isize>>() ==
-                vec![]);
-        assert!(super::range_step_inclusive(200, 200, 1).collect::<Vec<isize>>() ==
-                vec![200]);
+        assert!(super::range_step_inclusive(200, -5, 1).collect::<Vec<isize>>() == vec![]);
+        assert!(super::range_step_inclusive(200, 200, 1).collect::<Vec<isize>>() == vec![200]);
     }
 }

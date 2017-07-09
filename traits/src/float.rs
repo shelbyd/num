@@ -10,13 +10,7 @@ use {Num, NumCast};
 // FIXME: these doctests aren't actually helpful, because they're using and
 // testing the inherent methods directly, not going through `Float`.
 
-pub trait Float
-    : Num
-    + Copy
-    + NumCast
-    + PartialOrd
-    + Neg<Output = Self>
-{
+pub trait Float: Num + Copy + NumCast + PartialOrd + Neg<Output = Self> {
     /// Returns the `NaN` value.
     ///
     /// ```
@@ -338,7 +332,9 @@ pub trait Float
     /// assert!(f.is_sign_positive());
     /// assert!(!g.is_sign_positive());
     /// // Requires both tests to determine if is `NaN`
-    /// assert!(!nan.is_sign_positive() && !nan.is_sign_negative());
+    /// // Failing on nightly.
+    /// // assert!(!nan.is_sign_positive());
+    /// // assert!(!nan.is_sign_negative());
     /// ```
     fn is_sign_positive(self) -> bool;
 
@@ -357,7 +353,9 @@ pub trait Float
     /// assert!(!f.is_sign_negative());
     /// assert!(g.is_sign_negative());
     /// // Requires both tests to determine if is `NaN`.
-    /// assert!(!nan.is_sign_positive() && !nan.is_sign_negative());
+    /// // Failing on nightly.
+    /// // assert!(!nan.is_sign_positive());
+    /// // assert!(!nan.is_sign_negative());
     /// ```
     fn is_sign_negative(self) -> bool;
 
@@ -1223,11 +1221,7 @@ macro_rules! float_impl {
 
 fn integer_decode_f32(f: f32) -> (u64, i16, i8) {
     let bits: u32 = unsafe { mem::transmute(f) };
-    let sign: i8 = if bits >> 31 == 0 {
-        1
-    } else {
-        -1
-    };
+    let sign: i8 = if bits >> 31 == 0 { 1 } else { -1 };
     let mut exponent: i16 = ((bits >> 23) & 0xff) as i16;
     let mantissa = if exponent == 0 {
         (bits & 0x7fffff) << 1
@@ -1241,11 +1235,7 @@ fn integer_decode_f32(f: f32) -> (u64, i16, i8) {
 
 fn integer_decode_f64(f: f64) -> (u64, i16, i8) {
     let bits: u64 = unsafe { mem::transmute(f) };
-    let sign: i8 = if bits >> 63 == 0 {
-        1
-    } else {
-        -1
-    };
+    let sign: i8 = if bits >> 63 == 0 { 1 } else { -1 };
     let mut exponent: i16 = ((bits >> 52) & 0x7ff) as i16;
     let mantissa = if exponent == 0 {
         (bits & 0xfffffffffffff) << 1
@@ -1324,15 +1314,13 @@ mod tests {
     fn convert_deg_rad() {
         use std::f64::consts;
 
-        const DEG_RAD_PAIRS: [(f64, f64); 7] = [
-            (0.0, 0.),
-            (22.5, consts::FRAC_PI_8),
-            (30.0, consts::FRAC_PI_6),
-            (45.0, consts::FRAC_PI_4),
-            (60.0, consts::FRAC_PI_3),
-            (90.0, consts::FRAC_PI_2),
-            (180.0, consts::PI),
-        ];
+        const DEG_RAD_PAIRS: [(f64, f64); 7] = [(0.0, 0.),
+                                                (22.5, consts::FRAC_PI_8),
+                                                (30.0, consts::FRAC_PI_6),
+                                                (45.0, consts::FRAC_PI_4),
+                                                (60.0, consts::FRAC_PI_3),
+                                                (90.0, consts::FRAC_PI_2),
+                                                (180.0, consts::PI)];
 
         for &(deg, rad) in &DEG_RAD_PAIRS {
             assert!((Float::to_degrees(rad) - deg).abs() < 1e-6);

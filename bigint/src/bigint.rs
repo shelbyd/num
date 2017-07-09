@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Shl, Shr, Sub, Not};
 use std::str::{self, FromStr};
 use std::fmt;
 use std::cmp::Ordering::{self, Less, Greater, Equal};
-use std::{i64, u64};
+use std::{i128, u128};
 use std::ascii::AsciiExt;
 
 #[cfg(feature = "serde")]
@@ -16,8 +16,8 @@ use serde;
 use rand::Rng;
 
 use integer::Integer;
-use traits::{ToPrimitive, FromPrimitive, Num, CheckedAdd, CheckedSub,
-             CheckedMul, CheckedDiv, Signed, Zero, One};
+use traits::{ToPrimitive, FromPrimitive, Num, CheckedAdd, CheckedSub, CheckedMul, CheckedDiv,
+             Signed, Zero, One};
 
 use self::Sign::{Minus, NoSign, Plus};
 
@@ -517,11 +517,7 @@ impl Integer for BigInt {
         let (d_ui, r_ui) = self.data.div_mod_floor(&other.data);
         let d = BigInt::from_biguint(self.sign, d_ui);
         let r = BigInt::from_biguint(self.sign, r_ui);
-        if other.is_negative() {
-            (-d, r)
-        } else {
-            (d, r)
-        }
+        if other.is_negative() { (-d, r) } else { (d, r) }
     }
 
     #[inline]
@@ -604,17 +600,17 @@ impl Integer for BigInt {
 
 impl ToPrimitive for BigInt {
     #[inline]
-    fn to_i64(&self) -> Option<i64> {
+    fn to_i128(&self) -> Option<i128> {
         match self.sign {
-            Plus => self.data.to_i64(),
+            Plus => self.data.to_i128(),
             NoSign => Some(0),
             Minus => {
-                self.data.to_u64().and_then(|n| {
-                    let m: u64 = 1 << 63;
+                self.data.to_u128().and_then(|n| {
+                    let m: u128 = 1 << 127;
                     if n < m {
-                        Some(-(n as i64))
+                        Some(-(n as i128))
                     } else if n == m {
-                        Some(i64::MIN)
+                        Some(i128::MIN)
                     } else {
                         None
                     }
@@ -624,9 +620,9 @@ impl ToPrimitive for BigInt {
     }
 
     #[inline]
-    fn to_u64(&self) -> Option<u64> {
+    fn to_u128(&self) -> Option<u128> {
         match self.sign {
-            Plus => self.data.to_u64(),
+            Plus => self.data.to_u128(),
             NoSign => Some(0),
             Minus => None,
         }
@@ -634,35 +630,23 @@ impl ToPrimitive for BigInt {
 
     #[inline]
     fn to_f32(&self) -> Option<f32> {
-        self.data.to_f32().map(|n| {
-            if self.sign == Minus {
-                -n
-            } else {
-                n
-            }
-        })
+        self.data.to_f32().map(|n| { if self.sign == Minus { -n } else { n } })
     }
 
     #[inline]
     fn to_f64(&self) -> Option<f64> {
-        self.data.to_f64().map(|n| {
-            if self.sign == Minus {
-                -n
-            } else {
-                n
-            }
-        })
+        self.data.to_f64().map(|n| { if self.sign == Minus { -n } else { n } })
     }
 }
 
 impl FromPrimitive for BigInt {
     #[inline]
-    fn from_i64(n: i64) -> Option<BigInt> {
+    fn from_i128(n: i128) -> Option<BigInt> {
         Some(BigInt::from(n))
     }
 
     #[inline]
-    fn from_u64(n: u64) -> Option<BigInt> {
+    fn from_u128(n: u128) -> Option<BigInt> {
         Some(BigInt::from(n))
     }
 
@@ -676,13 +660,13 @@ impl FromPrimitive for BigInt {
     }
 }
 
-impl From<i64> for BigInt {
+impl From<i128> for BigInt {
     #[inline]
-    fn from(n: i64) -> Self {
+    fn from(n: i128) -> Self {
         if n >= 0 {
-            BigInt::from(n as u64)
+            BigInt::from(n as u128)
         } else {
-            let u = u64::MAX - (n as u64) + 1;
+            let u = u128::MAX - (n as u128) + 1;
             BigInt {
                 sign: Minus,
                 data: BigUint::from(u),
@@ -696,7 +680,7 @@ macro_rules! impl_bigint_from_int {
         impl From<$T> for BigInt {
             #[inline]
             fn from(n: $T) -> Self {
-                BigInt::from(n as i64)
+                BigInt::from(n as i128)
             }
         }
     }
@@ -705,11 +689,12 @@ macro_rules! impl_bigint_from_int {
 impl_bigint_from_int!(i8);
 impl_bigint_from_int!(i16);
 impl_bigint_from_int!(i32);
+impl_bigint_from_int!(i64);
 impl_bigint_from_int!(isize);
 
-impl From<u64> for BigInt {
+impl From<u128> for BigInt {
     #[inline]
-    fn from(n: u64) -> Self {
+    fn from(n: u128) -> Self {
         if n > 0 {
             BigInt {
                 sign: Plus,
@@ -726,7 +711,7 @@ macro_rules! impl_bigint_from_uint {
         impl From<$T> for BigInt {
             #[inline]
             fn from(n: $T) -> Self {
-                BigInt::from(n as u64)
+                BigInt::from(n as u128)
             }
         }
     }
@@ -735,6 +720,7 @@ macro_rules! impl_bigint_from_uint {
 impl_bigint_from_uint!(u8);
 impl_bigint_from_uint!(u16);
 impl_bigint_from_uint!(u32);
+impl_bigint_from_uint!(u64);
 impl_bigint_from_uint!(usize);
 
 impl From<BigUint> for BigInt {
@@ -804,9 +790,9 @@ impl biguint::ToBigUint for BigInt {
     #[inline]
     fn to_biguint(&self) -> Option<BigUint> {
         match self.sign() {
-            Plus    => Some(self.data.clone()),
-            NoSign  => Some(Zero::zero()),
-            Minus   => None,
+            Plus => Some(self.data.clone()),
+            NoSign => Some(Zero::zero()),
+            Minus => None,
         }
     }
 }
@@ -827,11 +813,13 @@ impl_to_bigint!(i8, FromPrimitive::from_i8);
 impl_to_bigint!(i16, FromPrimitive::from_i16);
 impl_to_bigint!(i32, FromPrimitive::from_i32);
 impl_to_bigint!(i64, FromPrimitive::from_i64);
+impl_to_bigint!(i128, FromPrimitive::from_i128);
 impl_to_bigint!(usize, FromPrimitive::from_usize);
 impl_to_bigint!(u8, FromPrimitive::from_u8);
 impl_to_bigint!(u16, FromPrimitive::from_u16);
 impl_to_bigint!(u32, FromPrimitive::from_u32);
 impl_to_bigint!(u64, FromPrimitive::from_u64);
+impl_to_bigint!(u128, FromPrimitive::from_u128);
 impl_to_bigint!(f32, FromPrimitive::from_f32);
 impl_to_bigint!(f64, FromPrimitive::from_f64);
 
@@ -1147,7 +1135,8 @@ impl BigInt {
     pub fn to_signed_bytes_le(&self) -> Vec<u8> {
         let mut bytes = self.data.to_bytes_le();
         let last_byte = bytes.last().map(|v| *v).unwrap_or(0);
-        if last_byte > 0x7f && !(last_byte == 0x80 && bytes.iter().rev().skip(1).all(Zero::is_zero)) {
+        if last_byte > 0x7f &&
+           !(last_byte == 0x80 && bytes.iter().rev().skip(1).all(Zero::is_zero)) {
             // msb used by magnitude, extend by 1 byte
             bytes.push(0);
         }

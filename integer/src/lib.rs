@@ -14,6 +14,9 @@
        html_root_url = "https://rust-num.github.io/num/",
        html_playground_url = "http://play.integer32.com/")]
 
+#![feature(i128)]
+#![feature(i128_type)]
+
 extern crate num_traits as traits;
 
 use std::ops::Add;
@@ -494,6 +497,7 @@ impl_integer_for_isize!(i8, test_integer_i8);
 impl_integer_for_isize!(i16, test_integer_i16);
 impl_integer_for_isize!(i32, test_integer_i32);
 impl_integer_for_isize!(i64, test_integer_i64);
+impl_integer_for_isize!(i128, test_integer_i128);
 impl_integer_for_isize!(isize, test_integer_isize);
 
 macro_rules! impl_integer_for_usize {
@@ -665,6 +669,7 @@ impl_integer_for_usize!(u8, test_integer_u8);
 impl_integer_for_usize!(u16, test_integer_u16);
 impl_integer_for_usize!(u32, test_integer_u32);
 impl_integer_for_usize!(u64, test_integer_u64);
+impl_integer_for_usize!(u128, test_integer_u128);
 impl_integer_for_usize!(usize, test_integer_usize);
 
 /// An iterator over binomial coefficients.
@@ -675,7 +680,7 @@ pub struct IterBinomial<T> {
 }
 
 impl<T> IterBinomial<T>
-    where T: Integer,
+    where T: Integer
 {
     /// For a given n, iterate over all binomial coefficients binomial(n, k), for k=0...n.
     ///
@@ -693,11 +698,15 @@ impl<T> IterBinomial<T>
     /// i32  | 33
     /// u64  | 67
     /// i64  | 66
+    /// u128  | 131
+    /// i128  | 130
     ///
     /// For larger n, `T` should be a bigint type.
     pub fn new(n: T) -> IterBinomial<T> {
         IterBinomial {
-            k: T::zero(), a: T::one(), n: n
+            k: T::zero(),
+            a: T::one(),
+            n: n,
         }
     }
 }
@@ -712,11 +721,9 @@ impl<T> Iterator for IterBinomial<T>
             return None;
         }
         self.a = if !self.k.is_zero() {
-            multiply_and_divide(
-                self.a.clone(),
-                self.n.clone() - self.k.clone() + T::one(),
-                self.k.clone()
-            )
+            multiply_and_divide(self.a.clone(),
+                                self.n.clone() - self.k.clone() + T::one(),
+                                self.k.clone())
         } else {
             T::one()
         };
@@ -731,7 +738,7 @@ impl<T> Iterator for IterBinomial<T>
 fn multiply_and_divide<T: Integer + Clone>(r: T, a: T, b: T) -> T {
     // See http://blog.plover.com/math/choose-2.html for the idea.
     let g = gcd(r.clone(), b.clone());
-    r/g.clone() * (a / (b/g))
+    r / g.clone() * (a / (b / g))
 }
 
 /// Calculate the binomial coefficient.
@@ -750,6 +757,8 @@ fn multiply_and_divide<T: Integer + Clone>(r: T, a: T, b: T) -> T {
 /// i32  | 33
 /// u64  | 67
 /// i64  | 66
+/// u128  | 131
+/// i128  | 130
 ///
 /// For larger n, consider using a bigint type for `T`.
 pub fn binomial<T: Integer + Clone>(mut n: T, k: T) -> T {
@@ -812,6 +821,8 @@ fn test_lcm_overflow() {
     check!(u32, 0x8000_0000, 0x02, 0x8000_0000);
     check!(i64, 0x4000_0000_0000_0000, 0x04, 0x4000_0000_0000_0000);
     check!(u64, 0x8000_0000_0000_0000, 0x02, 0x8000_0000_0000_0000);
+    check!(i128, 0x4000_0000_0000_0000_0000_0000_0000_0000, 0x04, 0x4000_0000_0000_0000_0000_0000_0000_0000);
+    check!(u128, 0x8000_0000_0000_0000_0000_0000_0000_0000, 0x02, 0x8000_0000_0000_0000_0000_0000_0000_0000);
 }
 
 #[test]
@@ -833,6 +844,8 @@ fn test_iter_binomial() {
     check_simple!(i32);
     check_simple!(u64);
     check_simple!(i64);
+    check_simple!(u128);
+    check_simple!(i128);
 
     macro_rules! check_binomial {
         ($t:ty, $n:expr) => { {
@@ -855,6 +868,8 @@ fn test_iter_binomial() {
     check_binomial!(i32, 33);
     check_binomial!(u64, 67);
     check_binomial!(i64, 66);
+    check_binomial!(u128, 131);
+    check_binomial!(i128, 130);
 }
 
 #[test]
@@ -911,6 +926,8 @@ fn test_binomial() {
     check!(i64, 14, 4, 1001);
     check!(i64, 0, 0, 1);
     check!(i64, 2, 3, 0);
+
+    // TODO(shelbyd): No idea.
 }
 
 #[test]
@@ -950,6 +967,8 @@ fn test_multinomial() {
     check_binomial!(i64, &[11, 24]);
     check_binomial!(i64, &[4, 10]);
 
+    // TODO(shelbyd): No idea.
+
     macro_rules! check_multinomial {
         ($t:ty, $k:expr, $r:expr) => { {
             let k: &[$t] = $k;
@@ -985,4 +1004,6 @@ fn test_multinomial() {
     check_multinomial!(u64, &[], 1);
     check_multinomial!(u64, &[0], 1);
     check_multinomial!(u64, &[12345], 1);
+
+    // TODO(shelbyd): No idea.
 }

@@ -72,9 +72,10 @@ macro_rules! signed_impl {
     )*)
 }
 
-signed_impl!(isize i8 i16 i32 i64);
+signed_impl!(isize i8 i16 i32 i64 i128);
 
-impl<T: Signed> Signed for Wrapping<T> where Wrapping<T>: Num + Neg<Output=Wrapping<T>>
+impl<T: Signed> Signed for Wrapping<T>
+    where Wrapping<T>: Num + Neg<Output = Wrapping<T>>
 {
     #[inline]
     fn abs(&self) -> Self {
@@ -92,10 +93,14 @@ impl<T: Signed> Signed for Wrapping<T> where Wrapping<T>: Num + Neg<Output=Wrapp
     }
 
     #[inline]
-    fn is_positive(&self) -> bool { self.0.is_positive() }
+    fn is_positive(&self) -> bool {
+        self.0.is_positive()
+    }
 
     #[inline]
-    fn is_negative(&self) -> bool { self.0.is_negative() }
+    fn is_negative(&self) -> bool {
+        self.0.is_negative()
+    }
 }
 
 macro_rules! signed_float_impl {
@@ -172,7 +177,10 @@ pub fn abs_sub<T: Signed>(x: T, y: T) -> T {
 /// * `0` if the number is zero
 /// * `1` if the number is positive
 /// * `-1` if the number is negative
-#[inline(always)] pub fn signum<T: Signed>(value: T) -> T { value.signum() }
+#[inline(always)]
+pub fn signum<T: Signed>(value: T) -> T {
+    value.signum()
+}
 
 /// A trait for values which cannot be negative
 pub trait Unsigned: Num {}
@@ -183,7 +191,7 @@ macro_rules! empty_trait_impl {
     )*)
 }
 
-empty_trait_impl!(Unsigned for usize u8 u16 u32 u64);
+empty_trait_impl!(Unsigned for usize u8 u16 u32 u64 u128);
 
 impl<T: Unsigned> Unsigned for Wrapping<T> where Wrapping<T>: Num {}
 
@@ -192,13 +200,12 @@ fn unsigned_wrapping_is_unsigned() {
     fn require_unsigned<T: Unsigned>(_: &T) {}
     require_unsigned(&Wrapping(42_u32));
 }
-/*
 // Commenting this out since it doesn't compile on Rust 1.8,
 // because on this version Wrapping doesn't implement Neg and therefore can't
 // implement Signed.
-#[test]
-fn signed_wrapping_is_signed() {
-    fn require_signed<T: Signed>(_: &T) {}
-    require_signed(&Wrapping(-42));
-}
-*/
+// #[test]
+// fn signed_wrapping_is_signed() {
+// fn require_signed<T: Signed>(_: &T) {}
+// require_signed(&Wrapping(-42));
+// }
+//
