@@ -15,7 +15,7 @@ use serde;
 
 use integer::Integer;
 use traits::{ToPrimitive, FromPrimitive, Float, Num, Unsigned, CheckedAdd, CheckedSub, CheckedMul,
-             CheckedDiv, Zero, One};
+             CheckedDiv, Saturating, Zero, One};
 
 #[path = "algorithms.rs"]
 mod algorithms;
@@ -505,6 +505,18 @@ impl CheckedDiv for BigUint {
             return None;
         }
         return Some(self.div(v));
+    }
+}
+
+impl Saturating for BigUint {
+    #[inline]
+    fn saturating_add(self, v: Self) -> Self {
+        self.add(v)
+    }
+
+    #[inline]
+    fn saturating_sub(self, v: Self) -> Self {
+        self.checked_sub(&v).unwrap_or(Self::zero())
     }
 }
 

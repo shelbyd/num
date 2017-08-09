@@ -17,7 +17,7 @@ use rand::Rng;
 
 use integer::Integer;
 use traits::{ToPrimitive, FromPrimitive, Num, CheckedAdd, CheckedSub, CheckedMul, CheckedDiv,
-             Signed, Zero, One};
+             Saturating, Signed, Zero, One};
 
 use self::Sign::{Minus, NoSign, Plus};
 
@@ -507,6 +507,18 @@ impl CheckedDiv for BigInt {
             return None;
         }
         return Some(self.div(v));
+    }
+}
+
+impl Saturating for BigInt {
+    #[inline]
+    fn saturating_add(self, v: Self) -> Self {
+        self.add(v)
+    }
+
+    #[inline]
+    fn saturating_sub(self, v: Self) -> Self {
+        self.sub(v)
     }
 }
 
